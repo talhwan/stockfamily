@@ -1,0 +1,81 @@
+<!-- Header -->
+<div style="height: 52.5px;"></div>
+<div class="fixed top-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200" style="z-index: 99;">
+    <!-- Header -->
+    <div class="header px-4 py-2">
+        <div class="points-section">
+            <div class="point-item cursor-pointer" onclick="listener_href('/cpoint/list/0', 'true')">
+                <div class="p-icon">P</div>
+                <span class="point-text"><span class="font_myuser_amountcpoint_comma">-</span> P</span>
+            </div>
+            <div class="point-item cursor-pointer" onclick="listener_href('/cpoint/list/1', 'true')">
+                <i class="fas fa-ticket-alt ticket-icon"></i>
+                <span class="ct-text"><span class="font_myuser_amountcticket_comma">-</span> CT</span>
+            </div>
+        </div>
+        <button class="vote-ticket-btn" onclick="random_todayquest();">
+            <i class="fas fa-gem"></i>
+            투표권 받기
+        </button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        console.log("ready!");
+        let refreshToken = localStorage.getItem("refreshToken");
+        if(!isNull(refreshToken)){
+            detail_user();
+        }
+    });
+    function detail_user() {
+        let userId = 0;
+        let _data = new Map();
+        _data.url = "/api/user";
+        _data.type = "GET";
+        _data.param = {'id': userId};
+        _data.success = function (obj_data, obj_status, obj_xhr) {
+            //alert(JSON.stringify(obj_data));
+            obj_data["amountcpoint_comma"] = numberWithCommas(obj_data["amountcpoint"]);
+            obj_data["amountcticket_comma"] = numberWithCommas(obj_data["amountcticket"]);
+            obj_data["countquizuser_comma"] = numberWithCommas(obj_data["countquizuser"]);
+            listenerAfterDetail(obj_data, "myuser");
+
+            let temp_href = document.location.href;
+            if (temp_href.includes("/home")) {
+                /*document.location.href = "/homepage/index";*/
+                flutter_getFCMToken();
+                flutter_getLocalStorage("refreshToken");
+            }
+
+        }
+        _data.error = function (obj_data, obj_status, obj_xhr) {
+            alert("정상적으로 이루어지지 않았습니다. 다시 시도해주세요.");
+        }
+        func_ajax(_data);
+    }
+
+    function random_todayquest(obj_ad_type) {
+
+        if(!listener_href(null, "true")){ return false; }
+
+        let _data = new Map();
+        _data.url = "/api/quest/random";
+        _data.type = "GET";
+        _data.param = {
+            ad_type : obj_ad_type
+        };
+        _data.success = function (obj_data, obj_status, obj_xhr) {
+            //alert(JSON.stringify(obj_data));
+            if(isNull(obj_data["link"])){
+                alert("모든 리워드 광고를 소진하셨습니다.");
+            } else {
+                listener_app_out_url(obj_data["link"]);
+            }
+        }
+        _data.error = function (obj_data, obj_status, obj_xhr) {
+            alert("정상적으로 이루어지지 않았습니다. 다시 시도해주세요.");
+        }
+        func_ajax(_data);
+    }
+</script>
