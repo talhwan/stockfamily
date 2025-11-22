@@ -13,6 +13,7 @@ public class PermissionDto {
             , {"user","사용자"}
             , {"notice", "공지사항"}
             , {"faq", "FAQ"}
+            , {"board", "Board"}
     };
 
     @NoArgsConstructor @AllArgsConstructor @SuperBuilder @Getter @Setter
