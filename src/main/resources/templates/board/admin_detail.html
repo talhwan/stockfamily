@@ -7,7 +7,6 @@
 
 <!-- Page Wrapper -->
 <div id="wrapper">
-
     <th:block th:replace="~{includes/admin/sidebar}" />
     <script>
         $(".nav_board_a").removeClass("collapsed");
@@ -19,7 +18,6 @@
 
         <!-- Main Content -->
         <div id="content">
-
             <th:block th:replace="~{includes/admin/topbar}" />
 
             <!-- Begin Page Content -->
@@ -32,6 +30,8 @@
                 <div class="mb-4">
                     <div class="form-group row">
                         <input type="hidden" id="detail_board_id" />
+                        <!-- 로그인 정보가 없어도 에러 안나게 빈값 처리 -->
+                        <input type="hidden" id="detail_user_id" value="" />
 
                         <label class="col-sm-2 col-form-label">*삭제여부</label>
                         <div class="col-sm-4">
@@ -70,8 +70,18 @@
                             <img class="hide" id="img_board_img" style="height: 75px;" alt="메인 사진" />
                         </div>
 
+                        <!-- 좋아요/싫어요 버튼 UI -->
+                        <label class="col-sm-2 col-form-label">반응</label>
+                        <div class="col-sm-10">
+                            <button type="button" class="btn btn-outline-primary" id="btn_like_true" onclick="click_like(true)">
+                                👍 좋아요 <span id="text_count_like_up">0</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="btn_like_false" onclick="click_like(false)">
+                                👎 싫어요 <span id="text_count_like_down">0</span>
+                            </button>
+                            <input type="hidden" id="my_boardlike_id" />
+                        </div>
                     </div>
-
                 </div>
             </div>
             <!-- /.container-fluid -->
@@ -91,9 +101,96 @@
 
 <script>
     $(document).ready(function () {
-        console.log("ready!");
         detail_board();
+        check_my_like();
     });
+
+    // 좋아요/싫어요 버튼 클릭 함수
+    function click_like(isLike) {
+        let id = $("#my_boardlike_id").val();
+        if(id === "") id = null;
+
+        let boardId = getIdFromUrl(null);
+        let userId = $("#detail_user_id").val();
+
+        // 로그인 안되어있으면 테스트 ID(1) 사용
+        if (!userId) {
+            userId = 1;
+        }
+
+        // 1. 이미 누른 상태(id 존재) -> 취소 로직
+        if (id) {
+            if(confirm("이미 반응을 남기셨습니다. 취소하시겠습니까?")){
+                $.ajax({
+                    url: "/api/boardlike",
+                    type: "DELETE",
+                    contentType: "application/json",
+                    data: JSON.stringify({ id: id }),
+                    success: function() {
+                        alert("취소되었습니다.");
+                        location.reload();
+                    },
+                    error: function() {
+                        alert("취소 실패");
+                    }
+                });
+            }
+            return;
+        }
+
+        let params = {
+            boardId: boardId,
+            userId: userId,
+            liked: isLike
+        };
+
+        $.ajax({
+            url: "/api/boardlike",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(params),
+            success: function() {
+                alert("반영되었습니다.");
+                location.reload();
+            },
+            error: function() {
+                alert("등록 실패");
+            }
+        });
+    }
+
+    // 내 좋아요 상태 확인 함수
+    function check_my_like() {
+        let boardId = getIdFromUrl(null);
+        let userId = $("#detail_user_id").val();
+
+        // 로그인 안되어있으면 테스트 ID(1) 사용
+        if(!userId) userId = 1;
+
+        $.ajax({
+            url: "/api/boardlike/list",
+            type: "GET",
+            data: {
+                boardId: boardId,
+                userId: userId
+            },
+            success: function(data) {
+                if (data && data.length > 0) {
+                    let myLike = data[0];
+                    $("#my_boardlike_id").val(myLike.id);
+
+                    if(myLike.liked) {
+                        $("#btn_like_true").removeClass("btn-outline-primary").addClass("btn-primary");
+                        $("#btn_like_false").prop("disabled", true);
+                    } else {
+                        $("#btn_like_false").removeClass("btn-outline-danger").addClass("btn-danger");
+                        $("#btn_like_true").prop("disabled", true);
+                    }
+                }
+            }
+        });
+    }
+
     function listener_upload_img() {
         // 파일 담기
         let tempFile = null;
@@ -118,8 +215,8 @@
                 alert("error")
             },
         });
-
     }
+
     function update_board(obj_this){
         let _param = {
             id : getIdFromUrl(null)
@@ -136,6 +233,7 @@
         }
         func_ajax(_data);
     }
+
     function detail_board() {
         let boardId = getIdFromUrl(null);
         let _data = new Map();
@@ -143,8 +241,9 @@
         _data.type = "GET";
         _data.param = {'id': boardId};
         _data.success = function (obj_data, obj_status, obj_xhr) {
-            //alert(JSON.stringify(obj_data));
             listenerAfterDetail(obj_data, "board");
+            $("#text_count_like_up").text(obj_data.countlikeup || 0);
+            $("#text_count_like_down").text(obj_data.countlikedown || 0);
         }
         _data.error = function (obj_data, obj_status, obj_xhr) {
             alert("정상적으로 이루어지지 않았습니다. 다시 시도해주세요.");
@@ -153,7 +252,5 @@
     }
 </script>
 
-
 </body>
-
 </html>
