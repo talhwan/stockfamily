@@ -1,13 +1,13 @@
 package com.thc.sprbasic2025.domain;
 
 import com.thc.sprbasic2025.dto.DefaultDto;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -15,6 +15,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Table(indexes = {@Index(columnList = "deleted")})
 @Entity
 public class Board extends AuditingFields {
+
+    // Board ↔ Boardcmt : 1:N 관계
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Boardcmt> boardcmts = new ArrayList<>();
 
     private String title;
     private String content;
