@@ -83,6 +83,25 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 댓글 섹션 -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">댓글</h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- 댓글 작성 -->
+                        <div class="mb-4">
+                            <textarea class="form-control mb-2" id="input_comment_content" rows="3" placeholder="댓글을 입력하세요"></textarea>
+                            <button class="btn btn-primary" onclick="create_comment()">댓글 작성</button>
+                        </div>
+
+                        <!-- 댓글 목록 -->
+                        <div id="comment_list">
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <!-- /.container-fluid -->
 
@@ -101,9 +120,36 @@
 
 <script>
     $(document).ready(function () {
-        detail_board();
-        check_my_like();
+        getAccessToken(function() {
+            detail_board();
+            check_my_like();
+            load_comments();
+        });
     });
+
+    function getAccessToken(callback) {
+        let refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+            if (callback) callback();
+            return;
+        }
+        $.ajax({
+            url: "/api/auth",
+            method: "POST",
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("RefreshToken", refreshToken);
+            },
+            contentType: 'application/json; charset=utf-8',
+            success: function(data, status, xhr) {
+                let accessToken = xhr.getResponseHeader("Authorization");
+                localStorage.setItem("accessToken", accessToken);
+                if (callback) callback();
+            },
+            error: function() {
+                if (callback) callback();
+            }
+        });
+    }
 
     // 좋아요/싫어요 버튼 클릭 함수
     function click_like(isLike) {
@@ -249,6 +295,138 @@
             alert("정상적으로 이루어지지 않았습니다. 다시 시도해주세요.");
         }
         func_ajax(_data);
+    }
+
+    // 댓글 목록 조회
+    function load_comments() {
+        let boardId = getIdFromUrl(null);
+        $.ajax({
+            url: "/api/boards/" + boardId + "/comments",
+            type: "GET",
+            headers: { "Authorization": localStorage.getItem("accessToken") },
+            success: function(data) {
+                render_comments(data);
+            },
+            error: function() {
+                console.log("댓글 목록 조회 실패");
+            }
+        });
+    }
+
+    // 댓글 목록 렌더링
+    function render_comments(comments) {
+        let html = '';
+        if (comments && comments.length > 0) {
+            for (let comment of comments) {
+                html += '<div class="border rounded p-3 mb-2" id="comment_item_' + comment.id + '">';
+                html += '  <div class="d-flex justify-content-between align-items-center mb-2">';
+                html += '    <small class="text-muted">사용자 ' + comment.userId + ' | ' + comment.createdAt + '</small>';
+                html += '    <div>';
+                html += '      <button class="btn btn-sm btn-outline-secondary" onclick="show_edit_form(' + comment.id + ')">수정</button>';
+                html += '      <button class="btn btn-sm btn-outline-danger" onclick="delete_comment(' + comment.id + ')">삭제</button>';
+                html += '    </div>';
+                html += '  </div>';
+                html += '  <div id="comment_content_' + comment.id + '">' + escapeHtml(comment.content) + '</div>';
+                html += '  <div id="comment_edit_form_' + comment.id + '" class="hide">';
+                html += '    <textarea class="form-control mb-2" id="edit_comment_content_' + comment.id + '">' + escapeHtml(comment.content) + '</textarea>';
+                html += '    <button class="btn btn-sm btn-primary" onclick="update_comment(' + comment.id + ')">저장</button>';
+                html += '    <button class="btn btn-sm btn-secondary" onclick="cancel_edit(' + comment.id + ')">취소</button>';
+                html += '  </div>';
+                html += '</div>';
+            }
+        } else {
+            html = '<p class="text-muted">등록된 댓글이 없습니다.</p>';
+        }
+        $('#comment_list').html(html);
+    }
+
+    // HTML 이스케이프
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;")
+                   .replace(/</g, "&lt;")
+                   .replace(/>/g, "&gt;")
+                   .replace(/"/g, "&quot;")
+                   .replace(/'/g, "&#039;");
+    }
+
+    // 댓글 작성
+    function create_comment() {
+        let boardId = getIdFromUrl(null);
+        let content = $('#input_comment_content').val();
+        if (!content || content.trim() === '') {
+            alert('댓글 내용을 입력하세요.');
+            return;
+        }
+        $.ajax({
+            url: "/api/boards/" + boardId + "/comments",
+            type: "POST",
+            contentType: "application/json",
+            headers: { "Authorization": localStorage.getItem("accessToken") },
+            data: JSON.stringify({ content: content }),
+            success: function() {
+                $('#input_comment_content').val('');
+                load_comments();
+            },
+            error: function() {
+                alert("댓글 작성 실패");
+            }
+        });
+    }
+
+    // 수정 폼 표시
+    function show_edit_form(commentId) {
+        $('#comment_content_' + commentId).addClass('hide');
+        $('#comment_edit_form_' + commentId).removeClass('hide');
+    }
+
+    // 수정 취소
+    function cancel_edit(commentId) {
+        $('#comment_content_' + commentId).removeClass('hide');
+        $('#comment_edit_form_' + commentId).addClass('hide');
+    }
+
+    // 댓글 수정
+    function update_comment(commentId) {
+        let boardId = getIdFromUrl(null);
+        let content = $('#edit_comment_content_' + commentId).val();
+        if (!content || content.trim() === '') {
+            alert('댓글 내용을 입력하세요.');
+            return;
+        }
+        $.ajax({
+            url: "/api/boards/" + boardId + "/comments/" + commentId,
+            type: "PUT",
+            contentType: "application/json",
+            headers: { "Authorization": localStorage.getItem("accessToken") },
+            data: JSON.stringify({ content: content }),
+            success: function() {
+                load_comments();
+            },
+            error: function() {
+                alert("댓글 수정 실패");
+            }
+        });
+    }
+
+    // 댓글 삭제
+    function delete_comment(commentId) {
+        if (!confirm('정말 삭제하시겠습니까?')) {
+            return;
+        }
+
+        let boardId = getIdFromUrl(null);
+        $.ajax({
+            url: "/api/boards/" + boardId + "/comments/" + commentId,
+            type: "DELETE",
+            headers: { "Authorization": localStorage.getItem("accessToken") },
+            success: function() {
+                load_comments();
+            },
+            error: function() {
+                alert("댓글 삭제 실패");
+            }
+        });
     }
 </script>
 

@@ -44,6 +44,7 @@ public class BoardDto {
         private Integer cate;
         private Integer minamount;
         private String img;
+        private Integer commentCount;
     }
 
     @Getter @Setter @SuperBuilder @NoArgsConstructor @AllArgsConstructor
