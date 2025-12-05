@@ -15,6 +15,7 @@
 			 , board.countlikedown
 			 , board.cate
 			 , board.minamount
+			 , (SELECT COUNT(*) FROM boardcmt WHERE boardcmt.board_id = board.id AND boardcmt.deleted = false) as commentCount
 		FROM board
 		WHERE board.id = #{id}
 	</select>
@@ -52,6 +53,7 @@
 	</select>
 	<select id="scrollList" parameterType="hashMap" resultType="com.thc.sprbasic2025.dto.BoardDto$DetailResDto">
 		SELECT board.id
+			 , (SELECT COUNT(*) FROM boardcmt WHERE boardcmt.board_id = board.id AND boardcmt.deleted = false) as commentCount
 		FROM board
 		<include refid="commonWhere"/>
 

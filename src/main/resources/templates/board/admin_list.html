@@ -12,6 +12,7 @@
         <td><font class="font_board_order"></font></td>
         <td><font class="font_board_deleted_{{deleted}} chk_board_deleted_{{id}}">{{deleted}}</font></td>
         <td class="cursor_pointer" onclick="location.href='/board/admin_detail/{{id}}';">{{title}}</td>
+        <td>{{commentCount}}</td>
         <td>{{createdAt}} / {{modifiedAt}}
             <div class="hide">
                 <input class="input_cursor_board_id" value="{{id}}"/>
@@ -130,6 +131,7 @@
                             <th>#</th>
                             <th>삭제여부</th>
                             <th>제목</th>
+                            <th>댓글 수</th>
                             <th>입력일시/수정일시</th>
                         </tr>
                         </thead>
